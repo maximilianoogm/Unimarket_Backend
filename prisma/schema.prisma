@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ========================================================
+// MODELO DE DATOS UNIMARKET (Fase Backend)
+// ========================================================
+
+// 1. Usuarios / Alumnos 
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  nombre    String
+  carrera   String    @default("Ingeniería")
+  active    Boolean   @default(true)
+  productos Product[] 
+}
+
+// 2. Productos / Anuncios en Venta (Análogo a Player de clase)
+model Product {
+  id               Int             @id @default(autoincrement())
+  titulo           String
+  descripcion      String
+  precio           Float
+  imagen           String          @default("https://via.placeholder.com/500")
+  active           Boolean         @default(true)
+  fechaPublicacion String
+  rating           Float           @default(5.0)
+  
+  // Relación 1:N con el Alumno Autor
+  autorId          Int
+  autor            User            @relation(fields: [autorId], references: [id])
+  
+  // Relación 1:N con la Categoría
+  categoryId       Int
+  categoria        Category        @relation(fields: [categoryId], references: [id])
+  
+  // Relación 1:1 con Detalles Extendidos (Análogo a PlayerAttributes de clase)
+  detalles         ProductDetails?
+  
+  // Relación Muchos a Muchos con Etiquetas/Condiciones (Análogo a Position de clase)
+  tags             Tag[]           @relation("TagProduct")
+}
+
+// 3. Categorías Modulares (Análogo a Nationality de clase)
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique // Ej. "Libros", "Apuntes", "Herramientas"
+  productos Product[]
+}
+
+// 4. Detalles Extendidos del Artículo (Relación 1:1 estricta)
+model ProductDetails {
+  id         Int     @id @default(autoincrement())
+  estado     String  // Ej. "Como nuevo", "Buen estado"
+  ciclo      Int     @default(1) 
+  stock      Int     @default(1)
+  productId  Int     @unique
+  producto   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// 5. Etiquetas de Búsqueda (Relación N:M implícita)
+model Tag {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique // Ej. "Urgente", "Negociable"
+  productos Product[] @relation("TagProduct")
+}
