@@ -11,21 +11,24 @@ datasource db {
   provider = "postgresql"
 }
 
-// ========================================================
-// MODELO DE DATOS UNIMARKET (Fase Backend)
-// ========================================================
-
-// 1. Usuarios / Alumnos 
+// 1. USUARIOS / ALUMNOS
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  nombre    String
-  carrera   String    @default("Ingeniería")
-  active    Boolean   @default(true)
-  productos Product[] 
+  id            Int           @id @default(autoincrement())
+  email         String        @unique
+  password      String        
+  nombre        String
+  carrera       String        @default("Ingeniería")
+  avatar        String        @default("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde")
+  whatsapp      String?       
+  active        Boolean       @default(true)
+  fechaRegistro String        
+  
+  productos     Product[]     @relation("ProductosPublicados") // Relación de autoría
+  favoritos     Product[]     @relation("ProductosFavoritos")  // N:M para Favoritos
+  mensajes      ChatMessage[] // Mensajes enviados desde la burbuja
 }
 
-// 2. Productos / Anuncios en Venta (Análogo a Player de clase)
+// 2. PRODUCTOS / ANUNCIOS EN VENTA
 model Product {
   id               Int             @id @default(autoincrement())
   titulo           String
@@ -36,41 +39,52 @@ model Product {
   fechaPublicacion String
   rating           Float           @default(5.0)
   
-  // Relación 1:N con el Alumno Autor
   autorId          Int
-  autor            User            @relation(fields: [autorId], references: [id])
+  autor            User            @relation("ProductosPublicados", fields: [autorId], references: [id])
   
-  // Relación 1:N con la Categoría
   categoryId       Int
   categoria        Category        @relation(fields: [categoryId], references: [id])
   
-  // Relación 1:1 con Detalles Extendidos (Análogo a PlayerAttributes de clase)
   detalles         ProductDetails?
-  
-  // Relación Muchos a Muchos con Etiquetas/Condiciones (Análogo a Position de clase)
   tags             Tag[]           @relation("TagProduct")
+  
+  usuariosFavorito User[]          @relation("ProductosFavoritos") // Extremo opuesto de Favoritos N:M
+  mensajesChat     ChatMessage[]   // Mensajes asociados a la negociación de este ítem
 }
 
-// 3. Categorías Modulares (Análogo a Nationality de clase)
+// 3. CATEGORÍAS MODULARES
 model Category {
   id        Int       @id @default(autoincrement())
-  name      String    @unique // Ej. "Libros", "Apuntes", "Herramientas"
+  name      String    @unique
   productos Product[]
 }
 
-// 4. Detalles Extendidos del Artículo (Relación 1:1 estricta)
+// 4. DETALLES EXTENDIDOS (1:1)
 model ProductDetails {
   id         Int     @id @default(autoincrement())
-  estado     String  // Ej. "Como nuevo", "Buen estado"
+  estado     String  
   ciclo      Int     @default(1) 
   stock      Int     @default(1)
   productId  Int     @unique
   producto   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
-// 5. Etiquetas de Búsqueda (Relación N:M implícita)
+// 5. ETIQUETAS DE BÚSQUEDA (N:M)
 model Tag {
   id        Int       @id @default(autoincrement())
-  name      String    @unique // Ej. "Urgente", "Negociable"
+  name      String    @unique
   productos Product[] @relation("TagProduct")
+}
+
+// 6. MENSAJES DE LA BURBUJA DE CHAT (Modelo Simplificado)
+model ChatMessage {
+  id         Int     @id @default(autoincrement())
+  contenido  String
+  fechaEnvio String
+  
+  remitenteId Int
+  remitente   User   @relation(fields: [remitenteId], references: [id])
+  
+  productoId  Int
+  producto    Product @relation(fields: [productoId], references: [id], onDelete: Cascade)
 }
