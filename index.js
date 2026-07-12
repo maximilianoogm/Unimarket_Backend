@@ -35,3 +35,84 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
     console.log("Iniciando servidor en puerto " + PORT)
 })
+
+// INTEGRANTE 2//
+app.post("/users", async (req, res) => {
+  const { email, password, name } = req.body;
+  try {
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: "Todos los campos (email, password, name) son obligatorios." });
+    }
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        password, 
+        name,
+      },
+    });
+    res.status(201).json({ message: "Usuario registrado con éxito", user: newUser });
+  } catch (error) {
+    if (error.code === "P2002") {
+      return res.status(400).json({ error: "El correo electrónico ya está registrado." });
+    }
+    res.status(500).json({ error: "Error interno del servidor al registrar." });
+  }
+});
+
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email y contraseña requeridos." });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user || user.password !== password) {
+      return res.status(401).json({ error: "Credenciales incorrectas." });
+    }
+
+    res.json({ message: "Login exitoso", user });
+  } catch (error) {
+    res.status(500).json({ error: "Error interno en el inicio de sesión." });
+  }
+});
+
+app.get("/users/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const userProfile = await prisma.user.findUnique({
+      where: { id: parseInt(id) }, 
+      include: {
+        favorites: true, 
+        _count: {
+          select: {
+            posts: true, 
+          },
+        },
+      },
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ error: "Usuario no encontrado." });
+    }
+
+    res.json({
+      id: userProfile.id,
+      name: userProfile.name,
+      email: userProfile.email,
+      totalPublicaciones: userProfile._count.posts, 
+      productosFavoritos: userProfile.favorites,    
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener el perfil del usuario." });
+  }
+});
+
+app.listen(PORT, () => {
+    console.log("Iniciando servidor en puerto " + PORT) //[cite: 1]
+})
