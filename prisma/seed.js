@@ -4,7 +4,7 @@ import { PrismaClient } from "../generated/prisma/index.js"
 import 'dotenv/config'
 
 // Configuración del driver nativo igual que en el index
-const cadenaConexion = process.env.DATABASE_URL?.includes("unimarketdb")
+const cadenaConexion = process.env.DATABASE_URL
   ? process.env.DATABASE_URL
   : "postgresql://unimarket:unimarket@localhost:5432/unimarketdb"
 
