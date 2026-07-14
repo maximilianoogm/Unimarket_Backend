@@ -26,7 +26,8 @@ model User {
   
   productos     Product[]     @relation("ProductosPublicados") // Relación de autoría
   favoritos     Product[]     @relation("ProductosFavoritos")  // N:M para Favoritos
-  mensajes      ChatMessage[] // Mensajes enviados desde la burbuja
+  mensajesEnviados   ChatMessage[] @relation("MensajesEnviados")   // Mensajes enviados desde la burbuja
+  mensajesRecibidos  ChatMessage[] @relation("MensajesRecibidos")  // Mensajes recibidos en la burbuja
 }
 
 // 2. PRODUCTOS / ANUNCIOS EN VENTA
@@ -84,7 +85,10 @@ model ChatMessage {
   fechaEnvio String
   
   remitenteId Int
-  remitente   User   @relation(fields: [remitenteId], references: [id])
+  remitente   User   @relation("MensajesEnviados", fields: [remitenteId], references: [id])
+
+  destinatarioId Int
+  destinatario   User @relation("MensajesRecibidos", fields: [destinatarioId], references: [id])
   
   productoId  Int
   producto    Product @relation(fields: [productoId], references: [id], onDelete: Cascade)
