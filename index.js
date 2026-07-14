@@ -31,13 +31,21 @@ app.get("/", (req, res) => {
 // INTEGRANTE 2: USUARIOS Y AUTENTICACIÓN
 // ==========================================
 app.post("/users", async (req, res) => {
-  const { email, password, name } = req.body;
+  // Aceptamos "nombre" (schema) o "name" por compatibilidad con el front.
+  const { email, password, nombre, name, carrera } = req.body;
+  const nombreFinal = nombre || name;
   try {
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: "Todos los campos (email, password, name) son obligatorios." });
+    if (!email || !password || !nombreFinal) {
+      return res.status(400).json({ error: "Todos los campos (email, password, nombre) son obligatorios." });
     }
     const newUser = await prisma.user.create({
-      data: { email, password, name },
+      data: {
+        email,
+        password,
+        nombre: nombreFinal,
+        ...(carrera ? { carrera } : {}),
+        fechaRegistro: new Date().toISOString().split("T")[0],
+      },
     });
     res.status(201).json({ message: "Usuario registrado con éxito", user: newUser });
   } catch (error) {
@@ -93,6 +101,17 @@ app.get("/users/:id", async (req, res) => {
 // ==========================================
 // INTEGRANTE 3: CATÁLOGO Y PRODUCTOS (TÚ)
 // ==========================================
+
+// 0. Listar categorías (para poblar el selector del formulario de publicar)
+app.get('/categories', async (req, res) => {
+  try {
+    const categorias = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+    res.status(200).json(categorias);
+  } catch (error) {
+    console.error("Error obteniendo categorías:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
 
 // 1. Obtener todos los productos (Para la galería principal)
 app.get('/products', async (req, res) => {
