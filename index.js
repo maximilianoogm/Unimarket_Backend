@@ -3,7 +3,7 @@ import bodyParser from "body-parser"
 import cors from "cors"
 import { Pool } from "pg"
 import { PrismaPg } from "@prisma/adapter-pg"
-import { PrismaClient } from "./generated/prisma/index.js" // Ruta personalizada del cliente
+import { PrismaClient } from "./generated/prisma/index.js" 
 import 'dotenv/config'
 
 const app = express()
@@ -13,7 +13,6 @@ app.use(cors())
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 
-// CORRECCIÓN: Quitamos la validación de "unimarketdb" para que agarre tu URL de Render
 const cadenaConexion = process.env.DATABASE_URL;
 
 const pool = new Pool({ connectionString: cadenaConexion })
@@ -31,7 +30,6 @@ app.get("/", (req, res) => {
 // INTEGRANTE 2: USUARIOS Y AUTENTICACIÓN
 // ==========================================
 app.post("/users", async (req, res) => {
-  // Aceptamos "nombre" (schema) o "name" por compatibilidad con el front.
   const { email, password, nombre, name, carrera } = req.body;
   const nombreFinal = nombre || name;
   try {
@@ -99,10 +97,9 @@ app.get("/users/:id", async (req, res) => {
 
 
 // ==========================================
-// INTEGRANTE 3: CATÁLOGO Y PRODUCTOS (TÚ)
+// INTEGRANTES 1 y 3: CATÁLOGO Y PRODUCTOS
 // ==========================================
 
-// 0. Listar categorías (para poblar el selector del formulario de publicar)
 app.get('/categories', async (req, res) => {
   try {
     const categorias = await prisma.category.findMany({ orderBy: { name: 'asc' } });
@@ -113,7 +110,6 @@ app.get('/categories', async (req, res) => {
   }
 });
 
-// 1. Obtener todos los productos (Para la galería principal)
 app.get('/products', async (req, res) => {
   try {
     const productos = await prisma.product.findMany({
@@ -143,7 +139,7 @@ app.get('/products/:id', async (req, res) => {
   }
 });
 
-// 3. Crear un producto (Reto técnico: Nested Writes)
+// 3. Crear un producto 
 app.post('/products', async (req, res) => {
   try {
     const { titulo, descripcion, precio, autorId, categoryId, estado, ciclo, stock } = req.body;
@@ -206,7 +202,7 @@ app.put('/products/:id', async (req, res) => {
   }
 });
 
-// 5. Eliminar un producto (DELETE - Nombres del Schema Corregidos)
+// 5. Eliminar un producto 
 app.delete('/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -218,13 +214,11 @@ app.delete('/products/:id', async (req, res) => {
     await prisma.productDetails.deleteMany({
       where: { productId: productId }
     });
-    console.log("✅ Detalles eliminados (si existían)");
 
     // 2. Eliminamos mensajes del chat
     await prisma.chatMessage.deleteMany({
       where: { productoId: productId }
     });
-    console.log("✅ Mensajes eliminados (si existían)");
 
     // 3. Desconectamos relaciones N:M de favoritos
     await prisma.product.update({
@@ -235,18 +229,37 @@ app.delete('/products/:id', async (req, res) => {
         }
       }
     });
-    console.log("✅ Favoritos desconectados");
 
     // 4. Eliminamos el producto principal
     await prisma.product.delete({
       where: { id: productId }
     });
-    console.log("🎉 ¡Producto eliminado con éxito de la base de datos!");
 
     res.status(200).json({ mensaje: "Publicación eliminada con éxito" });
   } catch (error) {
-    console.error("❌ Error grave al eliminar producto en backend:", error);
     res.status(500).json({ error: "No se pudo eliminar el producto", detalles: error.message });
+  }
+});
+
+// 6. Calificar un producto (PATCH /products/:id/rate)
+app.patch('/products/:id/rate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "La puntuación debe ser entre 1 y 5 estrellas." });
+    }
+
+    const productoActualizado = await prisma.product.update({
+      where: { id: parseInt(id) },
+      data: { rating: parseFloat(rating) }
+    });
+
+    res.status(200).json({ mensaje: "¡Gracias por puntuar!", producto: productoActualizado });
+  } catch (error) {
+    console.error("Error al puntuar producto:", error);
+    res.status(500).json({ error: "No se pudo registrar la puntuación" });
   }
 });
 
@@ -351,7 +364,7 @@ app.get("/messages/:productId", async (req, res) => {
 });
 
 // ==========================================
-// INICIO DEL SERVIDOR (Solo uno)
+// INICIO DEL SERVIDOR
 // ==========================================
 app.listen(PORT, () => {
     console.log("🚀 Servidor corriendo e integrado en el puerto " + PORT);
