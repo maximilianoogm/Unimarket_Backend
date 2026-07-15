@@ -175,6 +175,81 @@ app.post('/products', async (req, res) => {
   }
 });
 
+// 4. Editar un producto existente (PUT)
+app.put('/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { titulo, descripcion, precio, categoryId, estado, ciclo, stock } = req.body;
+
+    const productoActualizado = await prisma.product.update({
+      where: { id: parseInt(id) },
+      data: {
+        titulo,
+        descripcion,
+        precio: parseFloat(precio),
+        categoryId: parseInt(categoryId),
+        detalles: {
+          update: {
+            estado,
+            ciclo: parseInt(ciclo),
+            stock: parseInt(stock)
+          }
+        }
+      },
+      include: { detalles: true }
+    });
+
+    res.status(200).json(productoActualizado);
+  } catch (error) {
+    console.error("Error al actualizar producto:", error);
+    res.status(500).json({ error: "No se pudo actualizar el producto" });
+  }
+});
+
+// 5. Eliminar un producto (DELETE - Nombres del Schema Corregidos)
+app.delete('/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const productId = parseInt(id);
+
+    console.log("🗑️ Intentando eliminar producto ID en backend:", productId);
+
+    // 1. Eliminamos los detalles usando el nombre exacto del modelo con 's' (productDetails)
+    await prisma.productDetails.deleteMany({
+      where: { productId: productId }
+    });
+    console.log("✅ Detalles eliminados (si existían)");
+
+    // 2. Eliminamos mensajes del chat
+    await prisma.chatMessage.deleteMany({
+      where: { productoId: productId }
+    });
+    console.log("✅ Mensajes eliminados (si existían)");
+
+    // 3. Desconectamos relaciones N:M de favoritos
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        usuariosFavorito: {
+          set: []
+        }
+      }
+    });
+    console.log("✅ Favoritos desconectados");
+
+    // 4. Eliminamos el producto principal
+    await prisma.product.delete({
+      where: { id: productId }
+    });
+    console.log("🎉 ¡Producto eliminado con éxito de la base de datos!");
+
+    res.status(200).json({ mensaje: "Publicación eliminada con éxito" });
+  } catch (error) {
+    console.error("❌ Error grave al eliminar producto en backend:", error);
+    res.status(500).json({ error: "No se pudo eliminar el producto", detalles: error.message });
+  }
+});
+
 // ==========================================
 // INTEGRANTE 4: FAVORITOS Y MENSAJERÍA
 // ==========================================
